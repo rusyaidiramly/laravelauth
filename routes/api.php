@@ -10,8 +10,8 @@ Route::post('/login', [UserController::class, 'login']);
 
 //Protected route
 Route::group(['middleware' => ['auth:sanctum']], function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
-    Route::get('/logout', [UserController::class, 'logout']);
+    // Route::get('/user', function (Request $request) {
+    //     return $request->user();
+    // });
+    Route::get('/logout', [UserController::class, 'revoke_token']);
 });

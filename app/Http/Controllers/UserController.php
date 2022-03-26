@@ -5,11 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function register(Request $request)
+    public function register(Request $request, $generate_token = true)
     {
 
         $request->validate([
@@ -24,12 +23,14 @@ class UserController extends Controller
             'password' => bcrypt($request['password']),
         ]);
 
-        $token = $user->createToken('appToken')->plainTextToken;
-
         $response = [
             'user' => $user,
-            'token' => $token,
         ];
+
+        if ($generate_token) {
+            $token = $user->createToken('app_token')->plainTextToken;
+            $response['token'] = $token;
+        }
 
         return response($response, 201);
     }
@@ -42,26 +43,35 @@ class UserController extends Controller
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->email)->first();
-        if(!$user || !hash()->check($request->password, $user->password)) {
+        $credentials = $request->only(['email', 'password']);
+        $remember = true;
+        if (!auth()->attempt($credentials, $remember)) {
             return response(
                 ['message' => 'Email or password is incorrect.'], 401
             );
         }
 
-        $token = $user->createToken('appToken')->plainTextToken;
-
+        $user = User::where('email', $request->email)->first();
+        $token = $user->createToken('app_token')->plainTextToken;
         $response = [
             'user' => $user,
             'token' => $token,
         ];
 
-        return response($response, 200);
+        return response()->json($response, 200);
+    }
+
+    public function revoke_token()
+    {
+        auth()->user()->tokens()->delete();
+        return response()->json(['message' => 'Token revoked.'], 200);
     }
 
     public function logout()
     {
         auth()->user()->tokens()->delete();
-        return response(['message' => 'Logged out'], 200);
+        auth()->logout();
+        return response()->json(['message' => 'Logged out'], 200);
     }
+
 }
